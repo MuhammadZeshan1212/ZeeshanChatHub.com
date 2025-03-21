@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zeeshan ChatHub</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f4f4f4;
+        }
+        #chat-container {
+            width: 500px;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            position: relative;
+        }
+        #chat-header {
+            background-color: #007bff;
+            color: #fff;
+            padding: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+        }
+        #chat-header img {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+        #chat-messages {
+            height: 400px;
+            overflow-y: auto;
+            padding: 10px;
+            border-bottom: 1px solid #ddd;
+        }
+        #chat-input {
+            display: flex;
+            padding: 10px;
+        }
+        #chat-input input {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-right: 10px;
+        }
+        #chat-input button {
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        #chat-input button:hover {
+            background-color: #0056b3;
+        }
+        .message {
+            margin-bottom: 10px;
+            padding: 10px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+        }
+        .message.user {
+            justify-content: flex-end;
+        }
+        .message.bot {
+            justify-content: flex-start;
+        }
+        .message img {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            margin: 0 10px;
+        }
+        .message-content {
+            max-width: 70%;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .message.user .message-content {
+            background-color: #e1f5fe;
+        }
+        .message.bot .message-content {
+            background-color: #f5f5f5;
+        }
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            padding: 10px;
+        }
+        .loading img {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+        .loading span {
+            font-size: 14px;
+            color: #555;
+        }
+        .highlight {
+            background-color: #fff3cd;
+            padding: 10px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        #footer {
+            position: fixed;
+            bottom: 10px;
+            right: 10px;
+            font-size: 12px;
+            color: #007bff;
+        }
+    </style>
+</head>
+<body>
+    <div id="chat-container">
+        <div id="chat-header">
+            <img src="Zeeshan.jpg" alt="Zeeshan's Photo">
+            Zeeshan ChatHub
+        </div>
+        <div id="chat-messages"></div>
+        <div id="chat-input">
+            <input type="text" id="user-input" placeholder="Type your message...">
+            <button onclick="sendMessage()">Send</button>
+        </div>
+    </div>
+    <div id="footer">Thanks to Zeeshan for developing me.</div>
+
+    <script>
+        const apiKey = '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'; // Replace with your actual OpenRouter API key
+        const chatMessages = document.getElementById('chat-messages');
+        const botPhoto = 'Zeeshan.jpg'; // Local image for bot messages
+
+        function appendMessage(role, message) {
+            const messageElement = document.createElement('div');
+            messageElement.classList.add('message', role);
+
+            if (role === 'bot' && message.includes('```')) {
+                // Format code blocks
+                const codeContent = message.split('```')[1];
+                messageElement.innerHTML = `
+                    <img src="${botPhoto}" alt="Bot Photo">
+                    <div class="message-content">
+                        <pre>
+                            <code>${codeContent}</code>
+                            <button class="copy-button" onclick="copyCode(this)">Copy</button>
+                        </pre>
+                    </div>
+                `;
+            } else {
+                // Format regular responses
+                messageElement.innerHTML = `
+                    ${role === 'bot' ? `<img src="${botPhoto}" alt="Bot Photo">` : ''}
+                    <div class="message-content">${formatResponse(message)}</div>
+                `;
+            }
+
+            chatMessages.appendChild(messageElement);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function showLoading() {
+            const loadingElement = document.createElement('div');
+            loadingElement.classList.add('loading');
+            loadingElement.innerHTML = `
+                <img src="${botPhoto}" alt="Loading Photo">
+                <span>Typing...</span>
+            `;
+            chatMessages.appendChild(loadingElement);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function hideLoading() {
+            const loadingElement = document.querySelector('.loading');
+            if (loadingElement) {
+                loadingElement.remove();
+            }
+        }
+
+        function formatResponse(message) {
+            // Add line breaks and bold formatting for better readability
+            return message
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') // Bold text
+                .replace(/\n/g, '<br>'); // Line breaks
+        }
+
+        function copyCode(button) {
+            const code = button.previousElementSibling.textContent;
+            navigator.clipboard.writeText(code).then(() => {
+                button.textContent = 'Copied!';
+                setTimeout(() => button.textContent = 'Copy', 2000);
+            });
+        }
+
+        async function sendMessage() {
+            const userInput = document.getElementById('user-input').value;
+            if (!userInput) return;
+
+            appendMessage('user', userInput);
+            document.getElementById('user-input').value = '';
+
+            showLoading();
+
+            try {
+                let botMessage;
+                if (
+                    userInput.toLowerCase().includes('name') ||
+                    userInput.toLowerCase().includes('your name') ||
+                    userInput.toLowerCase().includes('who are you')
+                ) {
+                    botMessage = 'My name is <strong>Zeeshan ChatHub</strong>, and I am developed by Zeeshan. You can simply call me <strong>ChatHub</strong>.';
+                } else if (
+                    userInput.toLowerCase().includes('zeeshan') ||
+                    userInput.toLowerCase().includes('who developed you') ||
+                    userInput.toLowerCase().includes('who created you') ||
+                    userInput.toLowerCase().includes('about you') ||
+                    userInput.toLowerCase().includes('your personality') ||
+                    userInput.toLowerCase().includes('your development')
+                ) {
+                    botMessage = `
+                        <div class="highlight">
+                            <strong>Zeeshan</strong>, a talented and innovative individual, is the brilliant mind behind my creation, dedicated to enhancing people's lives through his exceptional skills, creativity, and passion for technology. Residing in the serene and picturesque village of <strong>Dana Raghzai</strong>, nestled within the breathtaking landscape of <strong>Wana, Waziristan, KPK, Pakistan</strong>, Zeeshan is currently pursuing his education at the prestigious <strong>Badloon School System</strong>. Despite his young age, he has already established himself as a highly respected and well-known personality within Pakistan. His remarkable dedication to technological advancement and unwavering commitment to empowering others have made him an inspiring figure among his peers and the broader community. Zeeshan's journey of knowledge and innovation continues to flourish, fueled by his desire to positively impact the world around him and to share his gifts with everyone who seeks his help.
+                        </div>
+                    `;
+                } else if (userInput.toLowerCase().includes('badloon school system')) {
+                    botMessage = `
+                        <div class="highlight">
+                            <strong>Badloon School System</strong> is a reputable educational institution located in Wana, South Waziristan, Pakistan. Committed to providing quality education, the school offers a nurturing environment where students from various backgrounds can excel academically and develop essential life skills. With a dedicated team of qualified teachers and modern teaching methodologies, Badloon School System strives to empower the youth of Wana by promoting knowledge, creativity, and critical thinking. The school aims to be a beacon of learning and progress in the region, contributing positively to the community’s educational landscape.
+                        </div>
+                    `;
+                } else if (userInput.toLowerCase().includes('site') || userInput.toLowerCase().includes('website')) {
+                    botMessage = 'https://dev-zeeshanpc.pantheonsite.io/';
+                } else {
+                    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${apiKey}`,
+                            'HTTP-Referer': window.location.href,
+                            'X-Title': 'Zeeshan ChatHub'
+                        },
+                        body: JSON.stringify({
+                            model: 'deepseek/deepseek-r1:free',
+                            messages: [{ role: 'user', content: userInput }]
+                        })
+                    });
+                    const data = await response.json();
+                    botMessage = data.choices[0].message.content;
+
+                    // Replace DeepSeek-related terms with "It"
+                    botMessage = botMessage.replace(/deepseek|deep seek|r1/gi, 'It').trim();
+                }
+
+                hideLoading();
+                appendMessage('bot', botMessage);
+            } catch (error) {
+                console.error('Error:', error);
+                hideLoading();
+                appendMessage('bot', 'Sorry, something went wrong. Please try again.');
+            }
+        }
+    </script>
+</body>
+</html>
